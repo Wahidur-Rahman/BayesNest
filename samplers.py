@@ -12,7 +12,7 @@ def mcmc_proposal(starting_point:tp.List[float]):
     while sample > 1 or sample <0:
         sample = np.random.normal(loc = starting_point[rand_int] , scale = mcmc_scale)
         #sample = starting_point[rand_int] + step
-        print('resampling',sample)
+        #print('resampling',sample)
 
     starting_point[rand_int] = sample
     return starting_point

@@ -11,6 +11,15 @@ VALID_SAMPLERS = [
     'dynamic',
     'slice'
 ]
+# Useful function
+def logsumexp(values):
+  biggest = np.max(values)
+  x = values - biggest
+  print('arrs',values,biggest,x)
+  result = np.log(np.sum(np.exp(x))) + biggest
+  #result = sum(np.exp(values))
+  print('result',result)
+  return result
 
 noise_term = 10e-200
 class Sampler:
@@ -18,7 +27,7 @@ class Sampler:
         prior: tp.Callable,
         ndim: int,
         sample_method:str = 'mcmc',
-        initial_points: int = 400,
+        initial_points: int = 5,
         evidence_tolerance:float = 0.1
         ):
 
@@ -64,10 +73,10 @@ class Sampler:
         print('cube', unit_cubes[0],prior_cubes[0])
 
         X_count = 1
-        X = np.exp(-X_count/self.intial_points)
-        X_prev = 1
+        logX = -X_count/self.intial_points
+        logX_prev = 0
 
-        self.X_list.append(X_prev)
+        self.X_list.append(logX_prev)
         self.likelihood_output_chain.append(0)
 
 
@@ -75,22 +84,23 @@ class Sampler:
         self.likelihood_live = np.array([self.log_likelihood(cube) for cube in copy.deepcopy(prior_cubes)])
         #print(self.likelihood_live)
         l_max = max(self.likelihood_live)
-        print(l_max,np.log(X_prev - X),l_max + np.log(X_prev - X) )
-        print(np.exp(l_max),X_prev - X,np.exp(l_max)*(X_prev - X))
+        weight = logsumexp([logX_prev, -logX])
+        print(l_max,weight,l_max + weight )
         #Evidence acurracy tolerance
-        while l_max + np.log(X_prev - X) > self.evidence_tolerance:
+        while np.abs(l_max + weight) > self.evidence_tolerance:
             #Step 3 - Discard lowest likelihood
             min_loc = np.where(self.likelihood_live == min(self.likelihood_live))[0][0]
             likelihood_lower_bound = self.likelihood_live[min_loc]
             
-            self.log_evidence +=  likelihood_lower_bound + np.log(X_prev - X)
+            increment = likelihood_lower_bound + weight 
+            self.log_evidence  = logsumexp([self.log_evidence, increment]) 
 
             unit_prior_lower_bound = unit_cubes[min_loc]
             prior_lower_bound = prior_cubes[min_loc]
             
             #Append to samples list
             self.likelihood_output_chain.append(likelihood_lower_bound)
-            self.X_list.append(X)
+            self.X_list.append(logX)
 
             #Step 4 - replace discarded point from samples from prior
             self.step_size = self.step_size * 0.99 # geometric shrinking of step size
@@ -113,28 +123,25 @@ class Sampler:
             
             #Assigning a new X but keeping track of the previous
             X_count += 1
-            X_prev = X
-            X = np.exp(-X_count/self.intial_points)
+            logX_prev = logX
+            logX = -X_count/self.intial_points
             l_max = max(self.likelihood_live)
-            print(l_max,l_max*(X_prev- X))
+            weight = logsumexp([logX_prev, -logX])
+            print(l_max,l_max + weight,self.log_evidence)
 
             self.likelihood_live[min_loc] = self.log_likelihood(new_prior_sample)
 
+            break
+        
         #Step 6 - if terminating, compute posterior, evidence and information
         #Add up remaining live points
-
-        self.likelihood_live = sorted(self.likelihood_live)
-        print(self.likelihood_live)
-
-        for likval in self.likelihood_live:
-            #log(w*lik) = log(w) + log(lik)
-            self.log_evidence += np.log(X_prev - X) + likval
-            #update X and X_prev
-            X_prev = X
-            X_count += 1
-            X = np.exp(-X_count/self.intial_points)
+        increment = logX - np.log(self.intial_points) + logsumexp(self.likelihood_live)
+        print(increment)
+        print(self.log_evidence)
+        self.log_evidence = logsumexp([self.log_evidence, increment])
 
         print('Log Evidence:',self.log_evidence)
+        
         return
 
     def return_chains():
