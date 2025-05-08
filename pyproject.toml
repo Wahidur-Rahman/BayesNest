@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pynest"
+name = "bayesnest"
 version = "0.1.0"
 description = "Lightweight log-space nested sampling for Bayesian inference"
 license = { file = "LICENSE" }
@@ -19,5 +19,5 @@ keywords = ["bayesian", "nested", "sampling", "inference","posterior","likelihoo
 dependencies = ["numpy", "matplotlib", "scipy", "corner"]
 
 [project.urls]
-"Homepage" = "https://github.com/Wahidur-Rahman/pynest"
-"Bug Tracker" = "https://github.com/Wahidur-Rahman/pynest/issues"
+"Homepage" = "https://github.com/Wahidur-Rahman/BayesNest"
+"Bug Tracker" = "https://github.com/Wahidur-Rahman/BayesNest/issues"

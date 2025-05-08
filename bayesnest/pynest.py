@@ -1,9 +1,9 @@
 import inspect
-from pynest.utils import *
+from bayesnest.utils import *
 from typing import Callable, Tuple, Optional
 import corner
 import matplotlib.pyplot as plt
-from pynest.priors import *
+from bayesnest.priors import *
 from scipy.special import logsumexp
 import time
 class NestedSampler:

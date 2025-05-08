@@ -1,4 +1,4 @@
-from pynest.pynest import NestedSampler
+from bayesnest.pynest import NestedSampler
 import numpy as np
 
 #Simple Linear Gaussian Model
