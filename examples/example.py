@@ -1,5 +1,7 @@
-from pynest import NestedSampler
+from pynest.pynest import NestedSampler
 import numpy as np
+
+#Simple Linear Gaussian Model
 mean = 0
 dev = 5
 def simulate_data(a,b,n):
