@@ -1,0 +1,1 @@
+General-purpose log-space nested sampler for Bayesian inference.

@@ -1,5 +1,4 @@
-import random
-
-def generate_cube(ndim):
-    # Generates a cube of length ndim
-    return [random.uniform(0,1) for i in range(ndim)]
+import numpy as np
+def generate_cube(ndim: int):
+    """Generates a point uniformly in the unit cube [0, 1]^ndim."""
+    return np.random.rand(ndim)

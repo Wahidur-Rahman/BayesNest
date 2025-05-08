@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pynest"
+version = "0.1.0"
+description = "Lightweight log-space nested sampling for Bayesian inference"
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{name = "Wahidur Rahman", email = "rahmanw@email.com"}]
+keywords = ["bayesian", "nested", "sampling", "inference","posterior","likelihood"]
+dependencies = ["numpy", "matplotlib", "scipy", "corner"]
+
+[project.urls]
+"Homepage" = "https://github.com/Wahidur-Rahman/pynest"
+"Bug Tracker" = "https://github.com/Wahidur-Rahman/pynest/issues"
