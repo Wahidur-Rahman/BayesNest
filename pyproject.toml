@@ -4,19 +4,34 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bayesnest"
-version = "0.1.1"
+version = "0.1.2"
 description = "Lightweight log-space nested sampling for Bayesian inference"
 license = { file = "LICENSE" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 readme = "README.md"
 requires-python = ">=3.8"
-authors = [{name = "Wahidur Rahman", email = "rahmanw@email.com"}]
-keywords = ["bayesian", "nested", "sampling", "inference","posterior","likelihood"]
-dependencies = ["numpy", "matplotlib", "scipy", "corner"]
+authors = [{ name = "Wahidur Rahman", email = "rahmanw@email.com" }]
+keywords = ["bayesian", "nested", "sampling", "inference", "posterior", "likelihood"]
+
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "corner",
+    "scikit-learn"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/Wahidur-Rahman/BayesNest"
