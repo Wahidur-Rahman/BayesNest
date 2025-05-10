@@ -29,8 +29,13 @@ class NestedSampler:
         Whether to print progress information.
     tolerance : float
         Log-evidence tolerance for convergence.
-    sampler : str
-        Constrained sampling strategy: 'uniform' or 'ellipsoid'.
+    sampler : str, optional
+        Sampler to use for generating constrained samples. One of:
+        - "uniform" : naive rejection
+        - "ellipsoid" : bounding ellipsoids
+        - "mcmc" : Metropolis mcmc
+        - "slice" : slice sampling
+        - "diffusive" : tempered MCMC sampling
     step_scale : float, optional
         Multiplier for proposal step size in samplers that require it (e.g., MCMC and slice).
         The actual step size is computed as `step_scale * std(live_points)`. A higher value leads
@@ -44,6 +49,11 @@ class NestedSampler:
         Number of full coordinate-wise slice sampling sweeps to perform per proposed point
         when using the "slice" sampler. More steps can improve decorrelation at the cost of speed.
         Defaults to 10.
+    beta : float, optional
+        Inverse temperature used in the "diffusive" sampler. Controls how strictly
+        new points must exceed the likelihood threshold. A value close to 1.0 imposes
+        hard constraints, while lower values allow exploratory violations for better mixing.
+        Defaults to 0.5.
 
     Attributes
     ----------
@@ -67,6 +77,7 @@ class NestedSampler:
         step_scale: float = 0.1,
         mcmc_steps:int = 50,
         slice_steps:int = 10,
+        beta:float = 0.5,
     ) -> None:
 
         assert live_points > 2, "Need at least 2 live_points"
@@ -88,6 +99,8 @@ class NestedSampler:
         self.step_scale = step_scale
         assert slice_steps > 0, "number of slice_steps must be at least 1"
         self.slice_steps = slice_steps
+        assert beta > 0, "beta must be greater than 0"
+        self.beta = beta
 
         self.log_evidence: float = np.nan
         self.logX: float = 0.0
@@ -205,6 +218,35 @@ class NestedSampler:
 
         return x
 
+    def _diffusive_constrained_sample(
+            self, live_points: List[np.ndarray], likelihood_threshold: float
+    ) -> np.ndarray:
+        current = np.copy(live_points[np.random.randint(len(live_points))])
+        step_size = self.step_scale * np.std(live_points, axis=0)
+        beta = self.beta
+
+        moved = False
+        accepted = 0
+
+        for _ in range(self.mcmc_steps):
+            proposal = current + step_size * np.random.randn(self.ndim)
+            logL = self.log_likelihood(proposal)
+            logL_current = self.log_likelihood(current)
+
+            delta = beta * (logL - logL_current)
+            if np.log(np.random.rand()) < delta and logL > likelihood_threshold:
+                current = proposal
+                accepted += 1
+                moved = True
+
+        if self.verbose:
+            print(f"Diffusive sampler acceptance rate: {accepted}/{self.mcmc_steps} ({accepted / self.mcmc_steps:.2%})")
+
+        if not moved and self.verbose:
+            print("Warning: Diffusive sampler did not find new point above threshold.")
+
+        return current
+
     def _propose_new_point(self, likelihood_threshold: float, live_points: List[np.ndarray]) -> np.ndarray:
         if self.sampler == "uniform":
             while True:
@@ -222,8 +264,7 @@ class NestedSampler:
             return self._slice_constrained_sample(live_points, likelihood_threshold)
 
         elif self.sampler == "diffusive":
-            #return self._diffusive_constrained_sample(live_points, likelihood_threshold)
-            raise NotImplementedError
+            return self._diffusive_constrained_sample(live_points, likelihood_threshold)
 
         raise ValueError(f"Unsupported sampler method: {self.sampler}")
 
