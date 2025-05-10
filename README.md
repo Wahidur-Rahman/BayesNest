@@ -60,4 +60,13 @@ Expected output:
 
 - A log-evidence trace that reflects both modes properly being integrated
 
+### Example: Rosenbrock
+
+```bash
+python examples/rosenbrock_example.py
+```
+
+The expected 2D plot between theta_0 and theta_1 should show a tight, curved valley, starting from -1 to 1
+
+
 

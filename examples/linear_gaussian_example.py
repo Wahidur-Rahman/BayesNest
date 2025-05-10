@@ -66,8 +66,8 @@ sampler = NestedSampler(
     prior=myprior,
     ndim=2,
     live_points=200,
-    max_iterations=100,
-    sampler="ellipsoid",
+    max_iterations=10000,
+    sampler="mcmc",
     tolerance=1e-5,
     verbose=True
 )

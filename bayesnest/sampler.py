@@ -31,6 +31,19 @@ class NestedSampler:
         Log-evidence tolerance for convergence.
     sampler : str
         Constrained sampling strategy: 'uniform' or 'ellipsoid'.
+    step_scale : float, optional
+        Multiplier for proposal step size in samplers that require it (e.g., MCMC and slice).
+        The actual step size is computed as `step_scale * std(live_points)`. A higher value leads
+        to broader exploration, while smaller values tighten proposals around the current state.
+        Defaults to 0.1.
+    mcmc_steps : int, optional
+        Number of MCMC steps to perform when using the "mcmc" sampler. Controls how far
+        the constrained Metropolis chain is allowed to explore before accepting the final point.
+        Defaults to 50.
+    slice_steps : int, optional
+        Number of full coordinate-wise slice sampling sweeps to perform per proposed point
+        when using the "slice" sampler. More steps can improve decorrelation at the cost of speed.
+        Defaults to 10.
 
     Attributes
     ----------
@@ -51,11 +64,15 @@ class NestedSampler:
         verbose: bool = False,
         tolerance: float = 0.05,
         sampler: str = "ellipsoid",
+        step_scale: float = 0.1,
+        mcmc_steps:int = 50,
+        slice_steps:int = 10,
     ) -> None:
 
         assert live_points > 2, "Need at least 2 live_points"
         assert tolerance > 0.0, "Tolerance must be positive"
-        assert sampler in ("uniform", "ellipsoid"), "sampler must be 'uniform' or 'ellipsoid'"
+        assert sampler in ("uniform", "ellipsoid", "mcmc", "slice", "diffusive"), \
+            "sampler must be 'uniform', 'ellipsoid', 'mcmc', 'slice', or 'diffusive'"
 
         self.log_likelihood = log_likelihood
         self.prior = prior
@@ -65,6 +82,12 @@ class NestedSampler:
         self.verbose = verbose
         self.tolerance = tolerance
         self.sampler = sampler
+        assert mcmc_steps > 0, "number of mcmc steps must be at least 1"
+        self.mcmc_steps = mcmc_steps
+        assert step_scale > 0, "step_scale must be greater than zero"
+        self.step_scale = step_scale
+        assert slice_steps > 0, "number of slice_steps must be at least 1"
+        self.slice_steps = slice_steps
 
         self.log_evidence: float = np.nan
         self.logX: float = 0.0
@@ -124,6 +147,86 @@ class NestedSampler:
             if self.log_likelihood(point) > likelihood_threshold:
                 return point
 
+    def _mcmc_constrained_sample(self, live_points: List[np.ndarray], likelihood_threshold: float) -> np.ndarray:
+        current = np.copy(live_points[np.random.randint(len(live_points))])
+        step_size = self.step_scale * np.std(live_points, axis=0)
+
+        moved = False
+        for _ in range(self.mcmc_steps):
+            proposal = current + step_size * np.random.randn(self.ndim)
+            if self.log_likelihood(proposal) > likelihood_threshold:
+                current = proposal
+                moved = True
+
+        if not moved and self.verbose:
+            print("Warning: MCMC did not move from initial point.")
+        return current
+
+    def _replace_dim(self, x: np.ndarray, dim: int, value: float) -> np.ndarray:
+        x_new = np.copy(x)
+        x_new[dim] = value
+        return x_new
+
+    def _slice_constrained_sample(
+            self, live_points: List[np.ndarray], likelihood_threshold: float
+    ) -> np.ndarray:
+        x = np.copy(live_points[np.random.randint(len(live_points))])
+        step_size = self.step_scale * np.std(live_points, axis=0)
+
+        moved = False
+
+        for _ in range(self.slice_steps):
+            for d in range(self.ndim):
+                log_y = np.log(np.random.rand()) + self.log_likelihood(x)
+
+                left = x[d] - step_size[d] * np.random.rand()
+                right = left + step_size[d]
+
+                while self.log_likelihood(self._replace_dim(x, d, left)) > log_y:
+                    left -= step_size[d]
+                while self.log_likelihood(self._replace_dim(x, d, right)) > log_y:
+                    right += step_size[d]
+
+                # Shrinkage loop
+                for _ in range(100):  # prevent infinite loops
+                    x_new_d = np.random.uniform(left, right)
+                    x_new = self._replace_dim(x, d, x_new_d)
+                    if self.log_likelihood(x_new) > likelihood_threshold:
+                        x[d] = x_new_d
+                        moved = True
+                        break
+                    elif x_new_d < x[d]:
+                        left = x_new_d
+                    else:
+                        right = x_new_d
+
+        if not moved and self.verbose:
+            print("Warning: slice sampler did not find new point above threshold.")
+
+        return x
+
+    def _propose_new_point(self, likelihood_threshold: float, live_points: List[np.ndarray]) -> np.ndarray:
+        if self.sampler == "uniform":
+            while True:
+                candidate = self.prior(generate_cube(self.ndim))
+                if self.log_likelihood(candidate) > likelihood_threshold:
+                    return candidate
+
+        elif self.sampler == "ellipsoid":
+            return self._multi_ellipsoid_sample(live_points, likelihood_threshold)
+
+        elif self.sampler == "mcmc":
+            return self._mcmc_constrained_sample(live_points, likelihood_threshold)
+
+        elif self.sampler == "slice":
+            return self._slice_constrained_sample(live_points, likelihood_threshold)
+
+        elif self.sampler == "diffusive":
+            #return self._diffusive_constrained_sample(live_points, likelihood_threshold)
+            raise NotImplementedError
+
+        raise ValueError(f"Unsupported sampler method: {self.sampler}")
+
     def run(self) -> None:
         start = time.time()
         unit_cubes = [generate_cube(self.ndim) for _ in range(self.live_points)]
@@ -162,15 +265,7 @@ class NestedSampler:
                 if self.verbose:
                     print(f"Stopping early at iteration {i} due to tolerance.")
                 break
-
-            if self.sampler == "uniform":
-                while True:
-                    w_new = self.prior(generate_cube(self.ndim))
-                    if self.log_likelihood(w_new) > l_min:
-                        break
-            elif self.sampler == "ellipsoid":
-                w_new = self._multi_ellipsoid_sample(prior_cubes, l_min)
-
+            w_new = self._propose_new_point(l_min, prior_cubes)
             prior_cubes[i_min] = w_new
             self.likelihood_live[i_min] = self.log_likelihood(w_new)
             self.logX = logX_new
