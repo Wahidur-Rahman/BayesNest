@@ -52,7 +52,7 @@ This example will:
 
 - Reveal both modes in the posterior distribution plot
 
-- Demonstrate ellpisoid nested sampling’s strength in handling multimodal distributions
+- Demonstrate ellipsoid nested sampling’s strength in handling multimodal distributions
 
 Expected output:
 
