@@ -6,18 +6,15 @@
 
 ## Features
 
-- Log-space evidence computation (numerically stable)
+- Log evidence computation
 - Posterior sampling with log-weights
 - Support for multimodal inference via ellipsoidal sampling
 - Corner plot visualization of posteriors
 - Convergence diagnostics for log-evidence
-- Simple, extensible Python codebase
 
 ---
 
 ## Installation
-
-From PyPI (after publishing):
 
 ```bash
 pip install bayesnest
@@ -32,12 +29,12 @@ This will:
 
 - Simulate data from a linear Gaussian model
 
-- Use nested sampling to estimate the posterior over
+- Use nested sampling to estimate the posterior distribution over
 slope `a` and intercept `b`
 
 - Print the posterior mean and log evidence
 
-- Generate a 2D corner plot of the posterior
+- Generate a 2D corner plot of the posterior distribution plot
 
 - Show the evolution of the log-evidence estimate over iterations
 
@@ -53,7 +50,7 @@ This example will:
 
 - Sample using ellipsoidal decomposition
 
-- Reveal both modes in the posterior
+- Reveal both modes in the posterior distribution plot
 
 - Demonstrate ellpisoid nested sampling’s strength in handling multimodal distributions
 
@@ -61,6 +58,6 @@ Expected output:
 
 - A bimodal posterior in the corner plot
 
-- A log-evidence trace that reflects both modes being integrated
+- A log-evidence trace that reflects both modes properly being integrated
 
 
